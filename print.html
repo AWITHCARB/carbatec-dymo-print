@@ -507,39 +507,49 @@
     }
 
 
-    // --------------------------------------------------
-    // 3 SECOND COUNTDOWN
-    // --------------------------------------------------
+// --------------------------------------------------
+// 3 SECOND COUNTDOWN
+// --------------------------------------------------
 
-    let seconds = 3;
+let seconds = 3;
 
-    const countdown =
-        document.getElementById("countdown");
+const countdown =
+    document.getElementById("countdown");
 
-    const countdownTimer =
-        setInterval(() => {
 
-            seconds--;
+// Start DYMO preparation immediately.
+// This allows printer discovery to happen during
+// the countdown rather than after it.
 
-            if (seconds > 0) {
+const printPreparation = preparePrint();
 
-                countdown.innerText =
-                    "Printing in " +
-                    seconds +
-                    "...";
 
-            } else {
+const countdownTimer =
+    setInterval(async () => {
 
-                clearInterval(countdownTimer);
+        seconds--;
 
-                countdown.innerText =
-                    "Printing...";
+        if (seconds > 0) {
 
-                printLabel();
+            countdown.innerText =
+                "Printing in " +
+                seconds +
+                "...";
 
-            }
+        } else {
 
-        }, 1000);
+            clearInterval(countdownTimer);
+
+            countdown.innerText =
+                "Printing...";
+
+            await printPreparation;
+
+            sendPrint();
+
+        }
+
+    }, 1000);
 
 </script>
 
