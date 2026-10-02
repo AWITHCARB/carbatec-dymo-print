@@ -2,17 +2,489 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>JavaScript Test</title>
+    <title>Carbatec Machine Label</title>
+
+    <script src="https://qajavascriptsdktests.azurewebsites.net/JavaScript/dymo.connect.framework.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+        }
+
+        #machineInfo {
+            white-space: pre-line;
+            margin-bottom: 30px;
+            font-size: 18px;
+        }
+
+        button {
+            font-size: 18px;
+            padding: 12px 24px;
+            cursor: pointer;
+        }
+
+        #status {
+            margin-top: 20px;
+            white-space: pre-line;
+            font-family: monospace;
+        }
+    </style>
 </head>
 
 <body>
 
-<h1>JavaScript Test</h1>
+<h1>Carbatec Machine Label</h1>
 
-<p id="result">SCRIPT HAS NOT RUN</p>
+<div id="machineInfo">
+    Reading machine information...
+</div>
+
+<button onclick="printLabel()">PRINT LABEL</button>
+
+<div id="status"></div>
 
 <script>
-    document.getElementById("result").innerText = "SCRIPT IS RUNNING";
+
+    // --------------------------------------------------
+    // READ URL PARAMETERS
+    // --------------------------------------------------
+
+    const params = new URLSearchParams(window.location.search);
+
+    const ITEM_ID = params.get("itemId") || "";
+    const MACHINE_ID = params.get("machineId") || "";
+
+    const POWER_APPS_BASE_URL =
+        "https://apps.powerapps.com/play/e/default-ae1be686-858c-487b-9303-c0b1d0ffb8a5/a/c4863ba1-b38c-48df-ac6e-7d3628bd937a" +
+        "?tenantId=ae1be686-858c-487b-9303-c0b1d0ffb8a5" +
+        "&hint=db3ebc0b-3285-4ede-afd9-98f04700fd4b" +
+        "&sourcetime=1790213182302" +
+        "&itemId=";
+
+    const QR_URL =
+        POWER_APPS_BASE_URL + encodeURIComponent(ITEM_ID);
+
+
+    // --------------------------------------------------
+    // DISPLAY MACHINE INFORMATION
+    // --------------------------------------------------
+
+    document.getElementById("machineInfo").innerText =
+        "Machine ID: " + (MACHINE_ID || "(missing)") +
+        "\nSharePoint ID: " + (ITEM_ID || "(missing)") +
+        "\n\nQR URL:\n" + QR_URL;
+
+
+    // --------------------------------------------------
+    // LABEL XML
+    // --------------------------------------------------
+
+    const LABEL_XML = `<?xml version="1.0" encoding="utf-8"?>
+<DieCutLabel Version="8.0" Units="twips">
+    <PaperOrientation>Landscape</PaperOrientation>
+    <Id>LargeAddress</Id>
+    <IsOutlined>false</IsOutlined>
+    <PaperName>30321 Large Address</PaperName>
+
+    <DrawCommands>
+        <RoundRectangle
+            X="0"
+            Y="0"
+            Width="2025"
+            Height="5020"
+            Rx="270"
+            Ry="270" />
+    </DrawCommands>
+
+    <ObjectInfo>
+        <BarcodeObject>
+            <Name>QRCode</Name>
+
+            <ForeColor
+                Alpha="255"
+                Red="0"
+                Green="0"
+                Blue="0" />
+
+            <BackColor
+                Alpha="0"
+                Red="255"
+                Green="255"
+                Blue="255" />
+
+            <LinkedObjectName />
+            <Rotation>Rotation0</Rotation>
+            <IsMirrored>False</IsMirrored>
+            <IsVariable>False</IsVariable>
+            <GroupID>-1</GroupID>
+            <IsOutlined>False</IsOutlined>
+
+            <Text></Text>
+
+            <Type>QRCode</Type>
+            <Size>Large</Size>
+            <TextPosition>None</TextPosition>
+
+            <TextFont
+                Family="Arial"
+                Size="8"
+                Bold="False"
+                Italic="False"
+                Underline="False"
+                Strikeout="False" />
+
+            <CheckSumFont
+                Family="Arial"
+                Size="8"
+                Bold="False"
+                Italic="False"
+                Underline="False"
+                Strikeout="False" />
+
+            <TextEmbedding>None</TextEmbedding>
+            <ECLevel>0</ECLevel>
+
+            <HorizontalAlignment>Center</HorizontalAlignment>
+
+            <QuietZonesPadding
+                Left="0"
+                Top="0"
+                Right="0"
+                Bottom="0" />
+
+        </BarcodeObject>
+
+        <Bounds
+            X="322"
+            Y="57.9999999999999"
+            Width="2130"
+            Height="1882" />
+
+    </ObjectInfo>
+
+    <ObjectInfo>
+
+        <TextObject>
+            <Name>ID_Text</Name>
+
+            <ForeColor
+                Alpha="255"
+                Red="0"
+                Green="0"
+                Blue="0" />
+
+            <BackColor
+                Alpha="0"
+                Red="255"
+                Green="255"
+                Blue="255" />
+
+            <LinkedObjectName />
+            <Rotation>Rotation0</Rotation>
+            <IsMirrored>False</IsMirrored>
+            <IsVariable>False</IsVariable>
+            <GroupID>-1</GroupID>
+
+            <HorizontalAlignment>Center</HorizontalAlignment>
+            <VerticalAlignment>Middle</VerticalAlignment>
+
+            <TextFitMode>ShrinkToFit</TextFitMode>
+            <UseFullFontHeight>True</UseFullFontHeight>
+            <Verticalized>False</Verticalized>
+
+            <StyledText>
+                <Element>
+
+                    <String xml:space="preserve">BM-006</String>
+
+                    <Attributes>
+
+                        <Font
+                            Family="Arial"
+                            Size="28"
+                            Bold="False"
+                            Italic="False"
+                            Underline="True"
+                            Strikeout="False" />
+
+                        <ForeColor
+                            Alpha="255"
+                            Red="0"
+                            Green="0"
+                            Blue="0"
+                            HueScale="100" />
+
+                    </Attributes>
+
+                </Element>
+            </StyledText>
+
+        </TextObject>
+
+        <Bounds
+            X="2250"
+            Y="630"
+            Width="2655"
+            Height="720" />
+
+    </ObjectInfo>
+
+
+    <ObjectInfo>
+
+        <TextObject>
+
+            <Name>Brand_Text</Name>
+
+            <ForeColor
+                Alpha="255"
+                Red="0"
+                Green="0"
+                Blue="0" />
+
+            <BackColor
+                Alpha="0"
+                Red="255"
+                Green="255"
+                Blue="255" />
+
+            <LinkedObjectName />
+            <Rotation>Rotation0</Rotation>
+            <IsMirrored>False</IsMirrored>
+            <IsVariable>False</IsVariable>
+            <GroupID>-1</GroupID>
+
+            <HorizontalAlignment>Center</HorizontalAlignment>
+            <VerticalAlignment>Middle</VerticalAlignment>
+
+            <TextFitMode>ShrinkToFit</TextFitMode>
+            <UseFullFontHeight>True</UseFullFontHeight>
+            <Verticalized>False</Verticalized>
+
+            <StyledText>
+                <Element>
+
+                    <String xml:space="preserve">Carbatec Machine</String>
+
+                    <Attributes>
+
+                        <Font
+                            Family="Arial"
+                            Size="28"
+                            Bold="False"
+                            Italic="False"
+                            Underline="False"
+                            Strikeout="False" />
+
+                        <ForeColor
+                            Alpha="255"
+                            Red="0"
+                            Green="0"
+                            Blue="0"
+                            HueScale="100" />
+
+                    </Attributes>
+
+                </Element>
+            </StyledText>
+
+        </TextObject>
+
+        <Bounds
+            X="2265"
+            Y="57.9999999999999"
+            Width="2655"
+            Height="572" />
+
+    </ObjectInfo>
+
+</DieCutLabel>`;
+
+
+    // --------------------------------------------------
+    // PRINT FUNCTION
+    // --------------------------------------------------
+
+    async function printLabel() {
+
+        const status = document.getElementById("status");
+
+        try {
+
+            status.innerText = "Initialising DYMO...";
+
+            dymo.label.framework.init();
+
+
+            // ------------------------------------------
+            // WAIT FOR DYMO WEB SERVICE
+            // ------------------------------------------
+
+            let attempts = 0;
+
+            while (attempts < 30) {
+
+                const environment =
+                    dymo.label.framework.checkEnvironment();
+
+                status.innerText =
+                    "Waiting for DYMO service...\nAttempt " +
+                    (attempts + 1) +
+                    " of 30";
+
+                if (
+                    environment.isWebServicePresent &&
+                    environment.isFrameworkInstalled
+                ) {
+                    break;
+                }
+
+                await new Promise(
+                    resolve => setTimeout(resolve, 500)
+                );
+
+                attempts++;
+            }
+
+
+            // ------------------------------------------
+            // GIVE DYMO EXTRA TIME
+            // ------------------------------------------
+
+            status.innerText =
+                "DYMO service detected.\nFinding printer...";
+
+            await new Promise(
+                resolve => setTimeout(resolve, 2000)
+            );
+
+
+            // ------------------------------------------
+            // FIND PRINTER
+            // ------------------------------------------
+
+            const printers =
+                await dymo.label.framework.getPrintersAsync();
+
+            if (
+                !printers ||
+                !printers.byIndex ||
+                printers.byIndex.length === 0
+            ) {
+                throw new Error(
+                    "No DYMO printers were found."
+                );
+            }
+
+
+            let printer = null;
+
+            for (
+                let i = 0;
+                i < printers.byIndex.length;
+                i++
+            ) {
+
+                const p = printers.byIndex[i];
+
+                if (
+                    p.name === "DYMO LabelWriter 450"
+                ) {
+                    printer = p;
+                    break;
+                }
+            }
+
+
+            if (!printer) {
+
+                printer = printers.byIndex[0];
+
+            }
+
+
+            status.innerText =
+                "Printer found:\n" +
+                printer.name +
+                "\n\nPreparing label...";
+
+
+            // ------------------------------------------
+            // CREATE LABEL
+            // ------------------------------------------
+
+            const label =
+                dymo.label.framework.openLabelXml(
+                    LABEL_XML
+                );
+
+
+            // QR CODE
+
+            label.setObjectText(
+                "QRCode",
+                "URL:" + QR_URL
+            );
+
+
+            // MACHINE ID
+
+            label.setObjectText(
+                "ID_Text",
+                MACHINE_ID
+            );
+
+
+            // BRAND
+
+            label.setObjectText(
+                "Brand_Text",
+                "Carbatec Machine"
+            );
+
+
+            // ------------------------------------------
+            // PRINT
+            // ------------------------------------------
+
+            status.innerText =
+                "Sending label to printer...";
+
+            dymo.label.framework.printLabel(
+                printer.name,
+                "",
+                label.toString(),
+                ""
+            );
+
+
+            status.innerText =
+                "PRINT SENT SUCCESSFULLY\n\n" +
+                "Printer: " +
+                printer.name +
+                "\nMachine: " +
+                MACHINE_ID +
+                "\nSharePoint ID: " +
+                ITEM_ID;
+
+
+        } catch (error) {
+
+            console.error(error);
+
+            status.innerText =
+                "PRINT ERROR\n\n" +
+                (
+                    error && error.message
+                        ? error.message
+                        : error
+                );
+
+        }
+
+    }
+
 </script>
 
 </body>
