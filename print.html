@@ -18,10 +18,10 @@
             font-size: 18px;
         }
 
-        button {
-            font-size: 18px;
-            padding: 12px 24px;
-            cursor: pointer;
+        #countdown {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
         }
 
         #status {
@@ -40,9 +40,12 @@
     Reading machine information...
 </div>
 
-<button onclick="printLabel()">PRINT LABEL</button>
+<div id="countdown">
+    Printing in 3...
+</div>
 
 <div id="status"></div>
+
 
 <script>
 
@@ -309,10 +312,16 @@
     async function printLabel() {
 
         const status = document.getElementById("status");
+        const countdown = document.getElementById("countdown");
 
         try {
 
             status.innerText = "Initialising DYMO...";
+
+
+            // ------------------------------------------
+            // INITIALISE DYMO
+            // ------------------------------------------
 
             dymo.label.framework.init();
 
@@ -398,9 +407,7 @@
 
 
             if (!printer) {
-
                 printer = printers.byIndex[0];
-
             }
 
 
@@ -420,7 +427,9 @@
                 );
 
 
-            // QR CODE
+            // ------------------------------------------
+            // SET QR CODE
+            // ------------------------------------------
 
             label.setObjectText(
                 "QRCode",
@@ -428,7 +437,9 @@
             );
 
 
-            // MACHINE ID
+            // ------------------------------------------
+            // SET MACHINE ID
+            // ------------------------------------------
 
             label.setObjectText(
                 "ID_Text",
@@ -436,7 +447,9 @@
             );
 
 
-            // BRAND
+            // ------------------------------------------
+            // SET BRAND
+            // ------------------------------------------
 
             label.setObjectText(
                 "Brand_Text",
@@ -448,6 +461,8 @@
             // PRINT
             // ------------------------------------------
 
+            countdown.innerText = "Printing...";
+
             status.innerText =
                 "Sending label to printer...";
 
@@ -458,6 +473,10 @@
                 ""
             );
 
+
+            // ------------------------------------------
+            // SUCCESS
+            // ------------------------------------------
 
             status.innerText =
                 "PRINT SENT SUCCESSFULLY\n\n" +
@@ -473,6 +492,8 @@
 
             console.error(error);
 
+            countdown.innerText = "Printing failed";
+
             status.innerText =
                 "PRINT ERROR\n\n" +
                 (
@@ -484,6 +505,41 @@
         }
 
     }
+
+
+    // --------------------------------------------------
+    // 3 SECOND COUNTDOWN
+    // --------------------------------------------------
+
+    let seconds = 3;
+
+    const countdown =
+        document.getElementById("countdown");
+
+    const countdownTimer =
+        setInterval(() => {
+
+            seconds--;
+
+            if (seconds > 0) {
+
+                countdown.innerText =
+                    "Printing in " +
+                    seconds +
+                    "...";
+
+            } else {
+
+                clearInterval(countdownTimer);
+
+                countdown.innerText =
+                    "Printing...";
+
+                printLabel();
+
+            }
+
+        }, 1000);
 
 </script>
 
