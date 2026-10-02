@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html>
 <head>
@@ -18,6 +19,14 @@
             cursor: pointer;
         }
 
+        #machineInfo {
+            white-space: pre-wrap;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+        }
+
         #status {
             white-space: pre-wrap;
             margin-top: 20px;
@@ -25,6 +34,13 @@
             background: #f0f0f0;
             border: 1px solid #ccc;
             min-height: 300px;
+            border: 1px solid #ccc;
+        }
+
+        #scriptTest {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #fff3cd;
             border: 1px solid #ccc;
         }
     </style>
@@ -35,19 +51,33 @@
 <h2>Carbatec Machine Label Printer</h2>
 
 <div id="machineInfo">
-    Loading machine information...
+    PAGE HTML LOADED
 </div>
 
-<br>
+<div id="scriptTest">
+    SCRIPT HAS NOT RUN
+</div>
 
 <button onclick="testPrint()">
     PRINT LABEL
 </button>
 
-<div id="status">Ready.</div>
+<div id="status">
+    Ready.
+</div>
 
 
 <script>
+
+/*
+ * ============================================================
+ * BASIC JAVASCRIPT TEST
+ * ============================================================
+ */
+
+document.getElementById("scriptTest").innerText =
+    "SCRIPT IS RUNNING";
+
 
 /*
  * ============================================================
@@ -61,38 +91,58 @@ const POWER_APPS_BASE_URL =
 
 /*
  * ============================================================
- * READ INFORMATION PASSED FROM POWER APPS
+ * READ URL PARAMETERS
  * ============================================================
  */
 
-const urlParams = new URLSearchParams(window.location.search);
+let ITEM_ID = "";
+let MACHINE_ID = "";
 
-const ITEM_ID = urlParams.get("itemId");
-const MACHINE_ID = urlParams.get("machineId");
+try {
+
+    const urlParams =
+        new URLSearchParams(window.location.search);
+
+    ITEM_ID =
+        urlParams.get("itemId") || "";
+
+    MACHINE_ID =
+        urlParams.get("machineId") || "";
+
+
+    document.getElementById("machineInfo").innerText =
+        "SCRIPT IS RUNNING\n\n" +
+        "Current URL:\n" +
+        window.location.href +
+        "\n\n" +
+        "Query string:\n" +
+        window.location.search +
+        "\n\n" +
+        "Machine ID: " +
+        (MACHINE_ID || "(missing)") +
+        "\n" +
+        "SharePoint ID: " +
+        (ITEM_ID || "(missing)");
+
+}
+catch (error) {
+
+    document.getElementById("machineInfo").innerText =
+        "JAVASCRIPT ERROR READING URL\n\n" +
+        error.message;
+
+}
 
 
 /*
  * ============================================================
- * BUILD THE QR CODE URL
+ * BUILD QR CODE URL
  * ============================================================
  */
 
 const QR_URL =
     POWER_APPS_BASE_URL +
-    encodeURIComponent(ITEM_ID || "");
-
-
-/*
- * ============================================================
- * DISPLAY THE VALUES WE RECEIVED
- * ============================================================
- */
-
-document.getElementById("machineInfo").innerText =
-    "Machine ID: " +
-    (MACHINE_ID || "(missing)") +
-    "\nSharePoint ID: " +
-    (ITEM_ID || "(missing)");
+    encodeURIComponent(ITEM_ID);
 
 
 /*
@@ -145,177 +195,4 @@ const LABEL_XML = `<?xml version="1.0" encoding="utf-8"?>
             <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
             <LinkedObjectName />
             <Rotation>Rotation0</Rotation>
-            <IsMirrored>False</IsMirrored>
-            <IsVariable>False</IsVariable>
-            <GroupID>-1</GroupID>
-            <HorizontalAlignment>Center</HorizontalAlignment>
-            <VerticalAlignment>Middle</VerticalAlignment>
-            <TextFitMode>ShrinkToFit</TextFitMode>
-            <UseFullFontHeight>True</UseFullFontHeight>
-            <Verticalized>False</Verticalized>
-
-            <StyledText>
-                <Element>
-                    <String xml:space="preserve">BM-006</String>
-                    <Attributes>
-                        <Font Family="Arial" Size="28" Bold="False" Italic="False" Underline="True" Strikeout="False" />
-                        <ForeColor Alpha="255" Red="0" Green="0" Blue="0" HueScale="100" />
-                    </Attributes>
-                </Element>
-            </StyledText>
-        </TextObject>
-
-        <Bounds X="2250" Y="630" Width="2655" Height="720" />
-    </ObjectInfo>
-
-    <ObjectInfo>
-        <TextObject>
-            <Name>Brand_Text</Name>
-            <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
-            <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
-            <LinkedObjectName />
-            <Rotation>Rotation0</Rotation>
-            <IsMirrored>False</IsMirrored>
-            <IsVariable>False</IsVariable>
-            <GroupID>-1</GroupID>
-            <HorizontalAlignment>Center</HorizontalAlignment>
-            <VerticalAlignment>Middle</VerticalAlignment>
-            <TextFitMode>ShrinkToFit</TextFitMode>
-            <UseFullFontHeight>True</UseFullFontHeight>
-            <Verticalized>False</Verticalized>
-
-            <StyledText>
-                <Element>
-                    <String xml:space="preserve">Carbatec Machine</String>
-                    <Attributes>
-                        <Font Family="Arial" Size="28" Bold="False" Italic="False" Underline="False" Strikeout="False" />
-                        <ForeColor Alpha="255" Red="0" Green="0" Blue="0" HueScale="100" />
-                    </Attributes>
-                </Element>
-            </StyledText>
-        </TextObject>
-
-        <Bounds X="2265" Y="57.9999999999999" Width="2655" Height="572" />
-    </ObjectInfo>
-
-</DieCutLabel>`;
-
-
-/*
- * ============================================================
- * STATUS DISPLAY
- * ============================================================
- */
-
-function setStatus(text) {
-
-    document.getElementById("status").innerText = text;
-
-}
-
-
-/*
- * ============================================================
- * WAIT FOR DYMO SERVICE
- * ============================================================
- */
-
-function waitForDYMO() {
-
-    return new Promise(function(resolve, reject) {
-
-        let attempts = 0;
-
-        const timer = setInterval(function() {
-
-            attempts++;
-
-            try {
-
-                const environment =
-                    dymo.label.framework.checkEnvironment();
-
-                console.log(
-                    "Discovery check " + attempts,
-                    environment
-                );
-
-                if (
-                    environment.isWebServicePresent &&
-                    environment.isFrameworkInstalled
-                ) {
-
-                    clearInterval(timer);
-
-                    resolve(environment);
-
-                    return;
-                }
-
-            }
-            catch (error) {
-
-                console.log(
-                    "Waiting for DYMO...",
-                    error
-                );
-
-            }
-
-            if (attempts >= 30) {
-
-                clearInterval(timer);
-
-                reject(
-                    new Error(
-                        "DYMO service discovery did not complete within 15 seconds."
-                    )
-                );
-
-            }
-
-        }, 500);
-
-    });
-
-}
-
-
-/*
- * ============================================================
- * PRINT
- * ============================================================
- */
-
-async function testPrint() {
-
-    try {
-
-        /*
-         * Validate URL parameters first.
-         */
-
-        if (!ITEM_ID) {
-
-            throw new Error(
-                "No itemId was supplied in the URL."
-            );
-
-        }
-
-        if (!MACHINE_ID) {
-
-            throw new Error(
-                "No machineId was supplied in the URL."
-            );
-
-        }
-
-
-        setStatus(
-            "STEP 1 — Starting DYMO..."
-        );
-
-
-        if (typeof dymo === "un
 ```
