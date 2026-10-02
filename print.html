@@ -58,6 +58,11 @@
     const ITEM_ID = params.get("itemId") || "";
     const MACHINE_ID = params.get("machineId") || "";
 
+
+    // --------------------------------------------------
+    // POWER APPS URL
+    // --------------------------------------------------
+
     const POWER_APPS_BASE_URL =
         "https://apps.powerapps.com/play/e/default-ae1be686-858c-487b-9303-c0b1d0ffb8a5/a/c4863ba1-b38c-48df-ac6e-7d3628bd937a" +
         "?tenantId=ae1be686-858c-487b-9303-c0b1d0ffb8a5" +
@@ -306,120 +311,162 @@
 
 
     // --------------------------------------------------
-    // PRINT FUNCTION
+    // PREPARE DYMO PRINTER
     // --------------------------------------------------
 
-    async function printLabel() {
+    async function preparePrinter() {
 
-        const status = document.getElementById("status");
-        const countdown = document.getElementById("countdown");
+        const status =
+            document.getElementById("status");
+
+        status.innerText =
+            "Initialising DYMO...";
+
+
+        // Initialise DYMO
+
+        dymo.label.framework.init();
+
+
+        // ------------------------------------------
+        // WAIT FOR DYMO WEB SERVICE
+        // ------------------------------------------
+
+        let attempts = 0;
+
+        while (attempts < 30) {
+
+            const environment =
+                dymo.label.framework.checkEnvironment();
+
+            if (
+                environment.isWebServicePresent &&
+                environment.isFrameworkInstalled
+            ) {
+                break;
+            }
+
+            await new Promise(
+                resolve => setTimeout(resolve, 500)
+            );
+
+            attempts++;
+        }
+
+
+        // ------------------------------------------
+        // CHECK FOR TIMEOUT
+        // ------------------------------------------
+
+        if (attempts >= 30) {
+
+            throw new Error(
+                "DYMO Web Service could not be detected."
+            );
+
+        }
+
+
+        // ------------------------------------------
+        // GIVE DYMO EXTRA TIME
+        // ------------------------------------------
+
+        await new Promise(
+            resolve => setTimeout(resolve, 1000)
+        );
+
+
+        status.innerText =
+            "Finding DYMO printer...";
+
+
+        // ------------------------------------------
+        // FIND PRINTERS
+        // ------------------------------------------
+
+        const printers =
+            await dymo.label.framework.getPrintersAsync();
+
+
+        if (
+            !printers ||
+            !printers.byIndex ||
+            printers.byIndex.length === 0
+        ) {
+
+            throw new Error(
+                "No DYMO printers were found."
+            );
+
+        }
+
+
+        // ------------------------------------------
+        // FIND LABELWRITER 450
+        // ------------------------------------------
+
+        let printer = null;
+
+        for (
+            let i = 0;
+            i < printers.byIndex.length;
+            i++
+        ) {
+
+            const p =
+                printers.byIndex[i];
+
+            if (
+                p.name === "DYMO LabelWriter 450"
+            ) {
+
+                printer = p;
+                break;
+
+            }
+
+        }
+
+
+        // ------------------------------------------
+        // FALLBACK TO FIRST PRINTER
+        // ------------------------------------------
+
+        if (!printer) {
+
+            printer =
+                printers.byIndex[0];
+
+        }
+
+
+        return printer;
+
+    }
+
+
+    // --------------------------------------------------
+    // SEND PRINT
+    // --------------------------------------------------
+
+    function sendPrint(printer) {
+
+        const status =
+            document.getElementById("status");
+
+        const countdown =
+            document.getElementById("countdown");
+
 
         try {
 
-            status.innerText = "Initialising DYMO...";
-
-
-            // ------------------------------------------
-            // INITIALISE DYMO
-            // ------------------------------------------
-
-            dymo.label.framework.init();
-
-
-            // ------------------------------------------
-            // WAIT FOR DYMO WEB SERVICE
-            // ------------------------------------------
-
-            let attempts = 0;
-
-            while (attempts < 30) {
-
-                const environment =
-                    dymo.label.framework.checkEnvironment();
-
-                status.innerText =
-                    "Waiting for DYMO service...\nAttempt " +
-                    (attempts + 1) +
-                    " of 30";
-
-                if (
-                    environment.isWebServicePresent &&
-                    environment.isFrameworkInstalled
-                ) {
-                    break;
-                }
-
-                await new Promise(
-                    resolve => setTimeout(resolve, 500)
-                );
-
-                attempts++;
-            }
-
-
-            // ------------------------------------------
-            // GIVE DYMO EXTRA TIME
-            // ------------------------------------------
-
             status.innerText =
-                "DYMO service detected.\nFinding printer...";
-
-            await new Promise(
-                resolve => setTimeout(resolve, 2000)
-            );
+                "Preparing label...";
 
 
-            // ------------------------------------------
-            // FIND PRINTER
-            // ------------------------------------------
-
-            const printers =
-                await dymo.label.framework.getPrintersAsync();
-
-            if (
-                !printers ||
-                !printers.byIndex ||
-                printers.byIndex.length === 0
-            ) {
-                throw new Error(
-                    "No DYMO printers were found."
-                );
-            }
-
-
-            let printer = null;
-
-            for (
-                let i = 0;
-                i < printers.byIndex.length;
-                i++
-            ) {
-
-                const p = printers.byIndex[i];
-
-                if (
-                    p.name === "DYMO LabelWriter 450"
-                ) {
-                    printer = p;
-                    break;
-                }
-            }
-
-
-            if (!printer) {
-                printer = printers.byIndex[0];
-            }
-
-
-            status.innerText =
-                "Printer found:\n" +
-                printer.name +
-                "\n\nPreparing label...";
-
-
-            // ------------------------------------------
-            // CREATE LABEL
-            // ------------------------------------------
+            // --------------------------------------
+            // OPEN LABEL
+            // --------------------------------------
 
             const label =
                 dymo.label.framework.openLabelXml(
@@ -427,9 +474,9 @@
                 );
 
 
-            // ------------------------------------------
-            // SET QR CODE
-            // ------------------------------------------
+            // --------------------------------------
+            // QR CODE
+            // --------------------------------------
 
             label.setObjectText(
                 "QRCode",
@@ -437,9 +484,9 @@
             );
 
 
-            // ------------------------------------------
-            // SET MACHINE ID
-            // ------------------------------------------
+            // --------------------------------------
+            // MACHINE ID
+            // --------------------------------------
 
             label.setObjectText(
                 "ID_Text",
@@ -447,9 +494,9 @@
             );
 
 
-            // ------------------------------------------
-            // SET BRAND
-            // ------------------------------------------
+            // --------------------------------------
+            // BRAND
+            // --------------------------------------
 
             label.setObjectText(
                 "Brand_Text",
@@ -457,14 +504,17 @@
             );
 
 
-            // ------------------------------------------
+            // --------------------------------------
             // PRINT
-            // ------------------------------------------
+            // --------------------------------------
 
-            countdown.innerText = "Printing...";
+            countdown.innerText =
+                "Printing...";
+
 
             status.innerText =
                 "Sending label to printer...";
+
 
             dymo.label.framework.printLabel(
                 printer.name,
@@ -474,9 +524,9 @@
             );
 
 
-            // ------------------------------------------
+            // --------------------------------------
             // SUCCESS
-            // ------------------------------------------
+            // --------------------------------------
 
             status.innerText =
                 "PRINT SENT SUCCESSFULLY\n\n" +
@@ -492,7 +542,10 @@
 
             console.error(error);
 
-            countdown.innerText = "Printing failed";
+
+            countdown.innerText =
+                "Printing failed";
+
 
             status.innerText =
                 "PRINT ERROR\n\n" +
@@ -507,49 +560,106 @@
     }
 
 
-// --------------------------------------------------
-// 3 SECOND COUNTDOWN
-// --------------------------------------------------
+    // --------------------------------------------------
+    // START DYMO PREPARATION IMMEDIATELY
+    // --------------------------------------------------
 
-let seconds = 3;
-
-const countdown =
-    document.getElementById("countdown");
+    const printerPromise =
+        preparePrinter();
 
 
-// Start DYMO preparation immediately.
-// This allows printer discovery to happen during
-// the countdown rather than after it.
+    // --------------------------------------------------
+    // 3 SECOND COUNTDOWN
+    // --------------------------------------------------
 
-const printPreparation = preparePrint();
+    let seconds = 3;
+
+    const countdown =
+        document.getElementById("countdown");
 
 
-const countdownTimer =
-    setInterval(async () => {
+    countdown.innerText =
+        "Printing in 3...";
 
-        seconds--;
 
-        if (seconds > 0) {
+    const countdownTimer =
+        setInterval(async function() {
 
-            countdown.innerText =
-                "Printing in " +
-                seconds +
-                "...";
+            seconds--;
 
-        } else {
 
-            clearInterval(countdownTimer);
+            // --------------------------------------
+            // 2 SECONDS
+            // --------------------------------------
 
-            countdown.innerText =
-                "Printing...";
+            if (seconds === 2) {
 
-            await printPreparation;
+                countdown.innerText =
+                    "Printing in 2...";
 
-            sendPrint();
+            }
 
-        }
 
-    }, 1000);
+            // --------------------------------------
+            // 1 SECOND
+            // --------------------------------------
+
+            else if (seconds === 1) {
+
+                countdown.innerText =
+                    "Printing in 1...";
+
+            }
+
+
+            // --------------------------------------
+            // PRINT
+            // --------------------------------------
+
+            else if (seconds <= 0) {
+
+                clearInterval(
+                    countdownTimer
+                );
+
+
+                countdown.innerText =
+                    "Printing...";
+
+
+                try {
+
+                    const printer =
+                        await printerPromise;
+
+
+                    sendPrint(printer);
+
+
+                } catch (error) {
+
+                    console.error(error);
+
+
+                    countdown.innerText =
+                        "Printing failed";
+
+
+                    document.getElementById(
+                        "status"
+                    ).innerText =
+                        "PRINT ERROR\n\n" +
+                        (
+                            error && error.message
+                                ? error.message
+                                : error
+                        );
+
+                }
+
+            }
+
+        }, 1000);
 
 </script>
 
