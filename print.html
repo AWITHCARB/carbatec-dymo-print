@@ -1,8 +1,9 @@
+```html
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>DYMO Print Diagnostic</title>
+    <title>Carbatec DYMO Label Printer</title>
 
     <script src="https://qajavascriptsdktests.azurewebsites.net/JavaScript/dymo.connect.framework.js"></script>
 
@@ -25,26 +26,81 @@
             background: #f0f0f0;
             border: 1px solid #ccc;
             min-height: 300px;
+            border: 1px solid #ccc;
         }
     </style>
 </head>
 
 <body>
 
-<h2>DYMO Print Diagnostic</h2>
+<h2>Carbatec Machine Label Printer</h2>
+
+<div id="machineInfo">
+    Loading machine information...
+</div>
+
+<br>
 
 <button onclick="testPrint()">
-    RUN PRINT TEST
+    PRINT LABEL
 </button>
 
 <div id="status">Ready.</div>
 
+
 <script>
 
-const QR_URL =
-    "https://apps.powerapps.com/play/e/default-ae1be686-858c-487b-9303-c0b1d0ffb8a5/a/c4863ba1-b38c-48df-ac6e-7d3628bd937a?tenantId=ae1be686-858c-487b-9303-c0b1d0ffb8a5&hint=db3ebc0b-3285-4ede-afd9-98f04700fd4b&sourcetime=1790213182302&itemId=6";
+/*
+ * ============================================================
+ * POWER APPS URL
+ * ============================================================
+ */
 
-const MACHINE_ID = "BM-006";
+const POWER_APPS_BASE_URL =
+    "https://apps.powerapps.com/play/e/default-ae1be686-858c-487b-9303-c0b1d0ffb8a5/a/c4863ba1-b38c-48df-ac6e-7d3628bd937a?tenantId=ae1be686-858c-487b-9303-c0b1d0ffb8a5&hint=db3ebc0b-3285-4ede-afd9-98f04700fd4b&sourcetime=1790213182302&itemId=";
+
+
+/*
+ * ============================================================
+ * READ INFORMATION PASSED FROM POWER APPS
+ * ============================================================
+ */
+
+const urlParams = new URLSearchParams(window.location.search);
+
+const ITEM_ID = urlParams.get("itemId");
+const MACHINE_ID = urlParams.get("machineId");
+
+
+/*
+ * ============================================================
+ * BUILD THE QR CODE URL
+ * ============================================================
+ */
+
+const QR_URL =
+    POWER_APPS_BASE_URL +
+    encodeURIComponent(ITEM_ID || "");
+
+
+/*
+ * ============================================================
+ * DISPLAY THE VALUES WE RECEIVED
+ * ============================================================
+ */
+
+document.getElementById("machineInfo").innerText =
+    "Machine ID: " +
+    (MACHINE_ID || "(missing)") +
+    "\nSharePoint ID: " +
+    (ITEM_ID || "(missing)");
+
+
+/*
+ * ============================================================
+ * DYMO LABEL XML
+ * ============================================================
+ */
 
 const LABEL_XML = `<?xml version="1.0" encoding="utf-8"?>
 <DieCutLabel Version="8.0" Units="twips">
@@ -146,10 +202,24 @@ const LABEL_XML = `<?xml version="1.0" encoding="utf-8"?>
 </DieCutLabel>`;
 
 
+/*
+ * ============================================================
+ * STATUS DISPLAY
+ * ============================================================
+ */
+
 function setStatus(text) {
+
     document.getElementById("status").innerText = text;
+
 }
 
+
+/*
+ * ============================================================
+ * WAIT FOR DYMO SERVICE
+ * ============================================================
+ */
 
 function waitForDYMO() {
 
@@ -190,6 +260,7 @@ function waitForDYMO() {
                     "Waiting for DYMO...",
                     error
                 );
+
             }
 
             if (attempts >= 30) {
@@ -201,6 +272,7 @@ function waitForDYMO() {
                         "DYMO service discovery did not complete within 15 seconds."
                     )
                 );
+
             }
 
         }, 500);
@@ -210,257 +282,41 @@ function waitForDYMO() {
 }
 
 
+/*
+ * ============================================================
+ * PRINT
+ * ============================================================
+ */
+
 async function testPrint() {
 
     try {
+
+        /*
+         * Validate URL parameters first.
+         */
+
+        if (!ITEM_ID) {
+
+            throw new Error(
+                "No itemId was supplied in the URL."
+            );
+
+        }
+
+        if (!MACHINE_ID) {
+
+            throw new Error(
+                "No machineId was supplied in the URL."
+            );
+
+        }
+
 
         setStatus(
             "STEP 1 — Starting DYMO..."
         );
 
-        if (typeof dymo === "undefined") {
 
-            throw new Error(
-                "DYMO is not defined."
-            );
-        }
-
-        dymo.label.framework.init();
-
-        setStatus(
-            "STEP 1 — DYMO initialised.\n\n" +
-            "STEP 2 — Waiting for service discovery..."
-        );
-
-        await waitForDYMO();
-
-        /*
-         * The successful diagnostic previously reached this point.
-         * Give the framework a little extra time before asking
-         * for the printers.
-         */
-
-        setStatus(
-            "STEP 2 — DYMO service discovered.\n\n" +
-            "Waiting 2 seconds for printer discovery..."
-        );
-
-        await new Promise(function(resolve) {
-            setTimeout(resolve, 2000);
-        });
-
-        setStatus(
-            "STEP 2 — Printer discovery should now be complete.\n\n" +
-            "STEP 3 — Getting printers..."
-        );
-
-        const printers =
-            await dymo.label.framework.getPrintersAsync();
-
-        console.log(
-            "PRINTER RESULT:",
-            printers
-        );
-
-        if (
-            !printers ||
-            !printers.byIndex ||
-            printers.byIndex.length === 0
-        ) {
-
-            throw new Error(
-                "STEP 3 FAILED — getPrintersAsync() returned no printers."
-            );
-        }
-
-        let printer = null;
-
-        for (
-            let i = 0;
-            i < printers.byIndex.length;
-            i++
-        ) {
-
-            console.log(
-                "Printer " + i,
-                printers.byIndex[i]
-            );
-
-            if (
-                printers.byIndex[i].name ===
-                "DYMO LabelWriter 450"
-            ) {
-
-                printer =
-                    printers.byIndex[i];
-
-                break;
-            }
-        }
-
-        if (!printer) {
-
-            throw new Error(
-                "STEP 3 FAILED — DYMO LabelWriter 450 was not found."
-            );
-        }
-
-        setStatus(
-            "STEP 3 — Printer found!\n\n" +
-            "Name: " +
-            printer.name +
-            "\n" +
-            "Model: " +
-            printer.modelName +
-            "\n" +
-            "Connected: " +
-            printer.isConnected +
-            "\n\n" +
-            "STEP 4 — Opening label..."
-        );
-
-
-        let label;
-
-        try {
-
-            label =
-                dymo.label.framework.openLabelXml(
-                    LABEL_XML
-                );
-
-        }
-        catch (error) {
-
-            throw new Error(
-                "STEP 4 FAILED — openLabelXml():\n" +
-                error.message
-            );
-        }
-
-
-        setStatus(
-            "STEP 3 — Printer found!\n\n" +
-            "STEP 4 — Label opened successfully.\n\n" +
-            "STEP 5 — Setting QR code..."
-        );
-
-
-        try {
-
-            label.setObjectText(
-                "QRCode",
-                "URL:" + QR_URL
-            );
-
-        }
-        catch (error) {
-
-            throw new Error(
-                "STEP 5 FAILED — QRCode:\n" +
-                error.message
-            );
-        }
-
-
-        try {
-
-            label.setObjectText(
-                "ID_Text",
-                MACHINE_ID
-            );
-
-        }
-        catch (error) {
-
-            throw new Error(
-                "STEP 5 FAILED — ID_Text:\n" +
-                error.message
-            );
-        }
-
-
-        try {
-
-            label.setObjectText(
-                "Brand_Text",
-                "Carbatec Machine"
-            );
-
-        }
-        catch (error) {
-
-            throw new Error(
-                "STEP 5 FAILED — Brand_Text:\n" +
-                error.message
-            );
-        }
-
-
-        setStatus(
-            "STEP 4 — Label opened successfully.\n\n" +
-            "STEP 5 — All three label objects updated.\n\n" +
-            "STEP 6 — Preparing print..."
-        );
-
-
-        const finalXml =
-            label.toString();
-
-
-        console.log(
-            "FINAL LABEL XML:",
-            finalXml
-        );
-
-
-        try {
-
-            dymo.label.framework.printLabel(
-                printer.name,
-                "",
-                finalXml,
-                ""
-            );
-
-        }
-        catch (error) {
-
-            throw new Error(
-                "STEP 6 FAILED — printLabel():\n" +
-                error.message
-            );
-        }
-
-
-        setStatus(
-            "SUCCESS!\n\n" +
-            "Print command sent to:\n" +
-            printer.name +
-            "\n\n" +
-            "Machine: " +
-            MACHINE_ID
-        );
-
-    }
-    catch (error) {
-
-        console.error(
-            "DYMO TEST ERROR:",
-            error
-        );
-
-        setStatus(
-            "ERROR\n\n" +
-            error.message +
-            "\n\n" +
-            "Open F12 → Console for the full error."
-        );
-    }
-
-}
-
-</script>
-
-</body>
-</html>
+        if (typeof dymo === "un
+```
